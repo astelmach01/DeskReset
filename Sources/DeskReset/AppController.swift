@@ -408,7 +408,7 @@ final class AppController: NSObject, ObservableObject {
     }
 
     private var currentIdleSeconds: TimeInterval {
-        CGEventSource.secondsSinceLastEventType(.combinedSessionState, eventType: .null)
+        UserIdleClock.secondsSinceLastInput()
     }
 
     private func updateStatusTitle() {

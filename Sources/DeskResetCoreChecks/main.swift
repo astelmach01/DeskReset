@@ -1,4 +1,5 @@
 import Foundation
+import CoreGraphics
 import DeskResetCore
 
 let calendar = Calendar(identifier: .gregorian)
@@ -146,6 +147,10 @@ try check("active time adjustment ignores brief idle moments") {
 
     try expect(shifted.activityStartedAt == start, "brief idle should not move activity anchor")
     try expect(shifted.lastCompletedAt == nil, "brief idle should keep nil completion anchor")
+}
+
+try check("user idle clock reads HID input state instead of session state") {
+    try expect(UserIdleClock.eventSourceStateID == .hidSystemState, "idle clock must track keyboard and pointer activity")
 }
 
 try check("meeting detector recognizes dedicated video call apps") {
