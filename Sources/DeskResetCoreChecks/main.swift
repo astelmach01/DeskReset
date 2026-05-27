@@ -149,6 +149,19 @@ try check("active time adjustment ignores brief idle moments") {
     try expect(shifted.lastCompletedAt == nil, "brief idle should keep nil completion anchor")
 }
 
+try check("active time adjustment respects a longer idle grace period") {
+    let start = try unwrap(date("2026-05-26 09:00"))
+    let shifted = ActiveTimeAdjustment.shiftedAnchors(
+        idleSeconds: 75,
+        elapsedSeconds: 10,
+        idleGraceSeconds: 5 * 60,
+        activityStartedAt: start,
+        lastCompletedAt: nil
+    )
+
+    try expect(shifted.activityStartedAt == start, "reading or thinking at screen should not pause the countdown")
+}
+
 try check("user idle clock reads HID input state instead of session state") {
     try expect(UserIdleClock.eventSourceStateID == .hidSystemState, "idle clock must track keyboard and pointer activity")
 }

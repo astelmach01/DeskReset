@@ -363,18 +363,21 @@ final class AppController: NSObject, ObservableObject {
         let shifted = ActiveTimeAdjustment.shiftedAnchors(
             idleSeconds: currentIdleSeconds,
             elapsedSeconds: elapsed,
+            idleGraceSeconds: activeTimePauseThreshold,
             activityStartedAt: activityStartedAt,
             lastCompletedAt: lastCompletedAt
         )
         let shiftedMicro = ActiveTimeAdjustment.shiftedAnchors(
             idleSeconds: currentIdleSeconds,
             elapsedSeconds: elapsed,
+            idleGraceSeconds: activeTimePauseThreshold,
             activityStartedAt: activityStartedAt,
             lastCompletedAt: lastMicroCompletedAt
         )
         let shiftedMovement = ActiveTimeAdjustment.shiftedAnchors(
             idleSeconds: currentIdleSeconds,
             elapsedSeconds: elapsed,
+            idleGraceSeconds: activeTimePauseThreshold,
             activityStartedAt: activityStartedAt,
             lastCompletedAt: lastMovementCompletedAt
         )
@@ -409,6 +412,10 @@ final class AppController: NSObject, ObservableObject {
 
     private var currentIdleSeconds: TimeInterval {
         UserIdleClock.secondsSinceLastInput()
+    }
+
+    private var activeTimePauseThreshold: TimeInterval {
+        TimeInterval(settings.idleResetMinutes * 60)
     }
 
     private func updateStatusTitle() {
@@ -592,7 +599,7 @@ final class AppController: NSObject, ObservableObject {
             "nextInSeconds": nextEvent.map { max(0, Int($0.startsAt.timeIntervalSinceNow.rounded())) } as Any,
             "pausedUntil": settings.pausedUntil?.iso8601String as Any,
             "idleSeconds": Int(currentIdleSeconds.rounded()),
-            "activeTimePaused": settings.idleResetEnabled && currentIdleSeconds > 30,
+            "activeTimePaused": settings.idleResetEnabled && currentIdleSeconds >= activeTimePauseThreshold,
             "lastIdleResetAt": lastIdleResetAt?.iso8601String as Any,
             "meeting": meetingPayload(),
             "smartDetection": [
