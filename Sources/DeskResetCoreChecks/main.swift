@@ -166,6 +166,26 @@ try check("user idle clock reads HID input state instead of session state") {
     try expect(UserIdleClock.eventSourceStateID == .hidSystemState, "idle clock must track keyboard and pointer activity")
 }
 
+try check("visible countdown keeps running while face is present") {
+    let shouldPause = CountdownPolicy.shouldPauseVisibleCountdown(
+        idleSeconds: 60 * 60,
+        naturalBreakThreshold: 5 * 60,
+        facePresent: true
+    )
+
+    try expect(shouldPause == false, "looking at the screen should keep the countdown moving")
+}
+
+try check("visible countdown keeps running even without camera signal") {
+    let shouldPause = CountdownPolicy.shouldPauseVisibleCountdown(
+        idleSeconds: 60 * 60,
+        naturalBreakThreshold: 5 * 60,
+        facePresent: false
+    )
+
+    try expect(shouldPause == false, "visible timer should not freeze; natural breaks reset separately")
+}
+
 try check("meeting detector recognizes dedicated video call apps") {
     let signal = MeetingSignal(
         appName: "zoom.us",

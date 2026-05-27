@@ -110,9 +110,7 @@ final class AppController: NSObject, ObservableObject {
 
     func tick() {
         let now = Date()
-        let elapsed = lastTickAt.map { now.timeIntervalSince($0) } ?? 0
         lastTickAt = now
-        applyActiveTimePauseIfNeeded(elapsed: elapsed)
         applyIdleResetIfNeeded(now: now)
         applySmartResetIfNeeded(now: now)
 
@@ -334,6 +332,10 @@ final class AppController: NSObject, ObservableObject {
 
     private func applyIdleResetIfNeeded(now: Date) {
         guard settings.idleResetEnabled else { return }
+        if settings.smartDetectionEnabled, smartDetection.facePresent {
+            wasIdle = false
+            return
+        }
         let threshold = TimeInterval(settings.idleResetMinutes * 60)
         let idle = currentIdleSeconds
 
@@ -356,35 +358,6 @@ final class AppController: NSObject, ObservableObject {
             updateNextEvent(now: now)
             rebuildMenu()
         }
-    }
-
-    private func applyActiveTimePauseIfNeeded(elapsed: TimeInterval) {
-        guard settings.idleResetEnabled, activeEvent == nil else { return }
-        let shifted = ActiveTimeAdjustment.shiftedAnchors(
-            idleSeconds: currentIdleSeconds,
-            elapsedSeconds: elapsed,
-            idleGraceSeconds: activeTimePauseThreshold,
-            activityStartedAt: activityStartedAt,
-            lastCompletedAt: lastCompletedAt
-        )
-        let shiftedMicro = ActiveTimeAdjustment.shiftedAnchors(
-            idleSeconds: currentIdleSeconds,
-            elapsedSeconds: elapsed,
-            idleGraceSeconds: activeTimePauseThreshold,
-            activityStartedAt: activityStartedAt,
-            lastCompletedAt: lastMicroCompletedAt
-        )
-        let shiftedMovement = ActiveTimeAdjustment.shiftedAnchors(
-            idleSeconds: currentIdleSeconds,
-            elapsedSeconds: elapsed,
-            idleGraceSeconds: activeTimePauseThreshold,
-            activityStartedAt: activityStartedAt,
-            lastCompletedAt: lastMovementCompletedAt
-        )
-        activityStartedAt = shifted.activityStartedAt
-        lastCompletedAt = shifted.lastCompletedAt
-        lastMicroCompletedAt = shiftedMicro.lastCompletedAt
-        lastMovementCompletedAt = shiftedMovement.lastCompletedAt
     }
 
     private func applySmartResetIfNeeded(now: Date) {
@@ -599,7 +572,11 @@ final class AppController: NSObject, ObservableObject {
             "nextInSeconds": nextEvent.map { max(0, Int($0.startsAt.timeIntervalSinceNow.rounded())) } as Any,
             "pausedUntil": settings.pausedUntil?.iso8601String as Any,
             "idleSeconds": Int(currentIdleSeconds.rounded()),
-            "activeTimePaused": settings.idleResetEnabled && currentIdleSeconds >= activeTimePauseThreshold,
+            "activeTimePaused": CountdownPolicy.shouldPauseVisibleCountdown(
+                idleSeconds: currentIdleSeconds,
+                naturalBreakThreshold: activeTimePauseThreshold,
+                facePresent: smartDetection.facePresent
+            ),
             "lastIdleResetAt": lastIdleResetAt?.iso8601String as Any,
             "meeting": meetingPayload(),
             "smartDetection": [
